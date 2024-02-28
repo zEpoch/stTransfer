@@ -1,3 +1,4 @@
-./build
-./dist
-./stTransfer.egg-info
+/build
+/dist
+/stTransfer.egg-info
+/stTransfer/__pycache__
