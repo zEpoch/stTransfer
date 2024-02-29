@@ -20,13 +20,16 @@ class BDistWheel(bdist_wheel):
 cmdclass = {
     "bdist_wheel": BDistWheel,
 }
- 
+
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
 
 requirements = open("requirements.txt").readline()
 
 setuptools.setup(
     name = "stTransfer",
-    version = "1.0.1",
+    version = "1.0.3",
     description = "Transfer learning for spatial transcriptomics data and single-cell RNA-seq data.",
     author = "zhoutao",
     author_email = "zhotoa@foxmail.com",
