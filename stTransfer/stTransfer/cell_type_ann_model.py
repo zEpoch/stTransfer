@@ -75,6 +75,7 @@ class MultiHeadAttention(nn.Module):
     def __init__(self, input_dim, num_heads):
         super(MultiHeadAttention, self).__init__()
         self.num_heads = num_heads
+        self.input_dim = input_dim
         self.attention = nn.MultiheadAttention(input_dim, num_heads)
     def forward(self, x):
         x = x.transpose(0, 1)  # MultiheadAttention需要(batch_size, seq_len, input_dim)的输入

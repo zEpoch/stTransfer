@@ -180,6 +180,7 @@ def dnn_workflow(data_path,
         sc.pp.filter_cells(adata, max_counts=max_count)
 
     print(f"  [After Preprocessing Data Info] \n {adata}")
+    adata.obs[ann_key] = adata.obs[ann_key].astype('category')
     label_names = adata.obs[ann_key].cat.categories.tolist()
     class_nums = len(adata.obs[ann_key].cat.categories)
     if marker_genes is None:
