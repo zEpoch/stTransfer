@@ -13,7 +13,7 @@ import time
 import pandas as pd
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
-from .cell_type_ann_model import DNNModel,DNNModelWithAttention # type: ignore
+from .cell_type_ann_model import DNNModel,DNNModelWithAttention,DNNModelWithMultiHeadAttention # type: ignore
 from .focal_loss import MultiCEFocalLoss # type: ignore
 
 
@@ -24,7 +24,7 @@ class DNNTrainer:
         self.set_optimizer()
 
     def set_model(self, input_dims, hidden_dims, output_dims):
-        self.model = DNNModelWithAttention(input_dims, hidden_dims, output_dims).to(self.device)
+        self.model = DNNModel(input_dims, hidden_dims, output_dims).to(self.device)
 
     def set_optimizer(self):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3, weight_decay=5e-4)
@@ -176,7 +176,7 @@ def dnn_workflow(data_path,
     if gene_min_cells > 0:
         sc.pp.filter_genes(adata, min_cells=gene_min_cells)
     if cell_max_counts < 100:
-        max_count = np.percentile(adata.obs["nCount_RNA"], cell_max_counts)
+        max_count = np.percentile(adata.X.sum(1).reshape(-1).tolist()[0], cell_max_counts)   
         sc.pp.filter_cells(adata, max_counts=max_count)
 
     print(f"  [After Preprocessing Data Info] \n {adata}")

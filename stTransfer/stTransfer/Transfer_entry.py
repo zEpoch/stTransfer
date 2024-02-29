@@ -48,7 +48,7 @@ def load_data(data_path, filter_mt=True, min_cells=10, min_counts=300, max_perce
     if min_cells > 0:
         sc.pp.filter_genes(adata, min_cells=min_cells)
     if max_percent < 100:
-        max_counts = np.percentile(adata.X.sum(1), max_percent) # type: ignore
+        max_counts = np.percentile(adata.X.sum(1).reshape(-1).tolist()[0], max_percent) # type: ignore
         sc.pp.filter_cells(adata, max_counts=max_counts)
 
     # adata_X_sparse_backup = adata.X.copy()
@@ -120,8 +120,11 @@ def distribution_fine_tune(adata, pca_dim=200, k_graph=30, edge_weight=True, epo
     sc.pp.log1p(adata)
     adata.X = (adata.X - adata.X.mean(0)) / adata.X.std(0)
     gene_mat = torch.Tensor(adata.X)
-    u, s, v = torch.pca_lowrank(gene_mat, pca_dim)
-    gene_mat = torch.matmul(gene_mat, v)
+    if pca_dim:
+        u, s, v = torch.pca_lowrank(gene_mat, pca_dim)
+        gene_mat = torch.matmul(gene_mat, v)
+    # u, s, v = torch.pca_lowrank(gene_mat, pca_dim)
+    # gene_mat = torch.matmul(gene_mat, v)
     cell_coo = torch.Tensor(adata.obsm['spatial'])
     data = torch_geometric.data.Data(x=gene_mat, pos=cell_coo) # type: ignore
     data = torch_geometric.transforms.KNNGraph(k=k_graph, loop=True)(data) # type: ignore

@@ -54,19 +54,20 @@ class DNNModelWithAttention(nn.Module):
         super(DNNModelWithAttention, self).__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
-            SelfAttention(hidden_dim),
             nn.GELU(),
             nn.Dropout(p=drop_rate),
+            SelfAttention(hidden_dim),
             nn.Linear(hidden_dim, int(hidden_dim / 2)),
-            SelfAttention(int(hidden_dim / 2)),
+            # SelfAttention(int(hidden_dim / 2)),
             nn.GELU(),
             nn.Dropout(p=drop_rate),
             nn.Linear(int(hidden_dim / 2), int(hidden_dim / 4)),
-            SelfAttention(int(hidden_dim / 4)),
+            # SelfAttention(int(hidden_dim / 4)),
             nn.GELU(),
             nn.Dropout(p=drop_rate),
             nn.Linear(int(hidden_dim / 4), output_dim),
             nn.Dropout(p=drop_rate)
+            
         )
     def forward(self, x):
         return self.net(x)

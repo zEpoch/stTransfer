@@ -1,6 +1,6 @@
 # stTransfer
 
-[![python >= 3.10](https://img.shields.io/badge/python-3.10-brightgreen)](https://www.python.org/) 
+[![python >= 3.8](https://img.shields.io/badge/python-3.8-brightgreen)](https://www.python.org/) 
 
 ### Installation      
 ```python
@@ -32,14 +32,14 @@ st_adata_with_pslabel = st.transfer_from_sc_data(adata = st_adata, # adata with 
                                                  dnn_path = '/data/model/dnn.bgi', # dnn model path
                                                  gpu="0")
 
-distribution_fine_tune(adata, 
-                       pca_dim=200, 
-                       k_graph=30, 
-                       edge_weight=True, 
-                       epochs=200, 
-                       w_cls=20, 
-                       w_dae=1., 
-                       w_gae=1.,
-                       gpu="0", 
-                       save_path="/data//output") # output path
+st.distribution_fine_tune(st_adata_with_pslabel, 
+                          pca_dim=0, 
+                          k_graph=30, 
+                          edge_weight=True, 
+                          epochs=200, 
+                          w_cls=50, 
+                          w_dae=1., 
+                          w_gae=1.,
+                          gpu="0", 
+                          save_path="/data/output") # output path
 ```
