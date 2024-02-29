@@ -26,7 +26,7 @@ requirements = open("requirements.txt").readline()
 
 setuptools.setup(
     name = "stTransfer",
-    version = "1.0.0",
+    version = "1.0.1",
     description = "Transfer learning for spatial transcriptomics data and single-cell RNA-seq data.",
     author = "zhoutao",
     author_email = "zhotoa@foxmail.com",

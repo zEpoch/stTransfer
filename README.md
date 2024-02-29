@@ -4,5 +4,5 @@
 
 ### Installation      
 ```python
-pip install SpatialID
+pip install stTransfer
 ```
