@@ -9,7 +9,7 @@
 import setuptools
 from wheel.bdist_wheel import bdist_wheel
 
-__version__ = "1.0.1"
+__version__ = "1.0.4"
 
 
 class BDistWheel(bdist_wheel):
@@ -29,7 +29,7 @@ requirements = open("requirements.txt").readline()
 
 setuptools.setup(
     name = "stTransfer",
-    version = "1.0.3",
+    version = "1.0.4",
     description = "Transfer learning for spatial transcriptomics data and single-cell RNA-seq data.",
     author = "zhoutao",
     author_email = "zhotoa@foxmail.com",
