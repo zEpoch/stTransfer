@@ -13,8 +13,10 @@ import time
 import pandas as pd
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
-from .cell_type_ann_model import DNNModel,DNNModelWithAttention,DNNModelWithMultiHeadAttention # type: ignore
+from .cell_type_ann_model import DNNModel # type: ignore
 from .focal_loss import MultiCEFocalLoss # type: ignore
+# import lightgbm as lgb # type: ignore
+import xgboost as xgb # type: ignore
 
 
 class DNNTrainer:
@@ -100,8 +102,11 @@ class DNNTrainer:
                 print(f"  [{time.strftime('%Y-%m-%d %H:%M:%S')} accuracy: {accuracy:.2f}% \npseudo_class: {pseudo_class}")
             print(f"  [{time.strftime('%Y-%m-%d %H:%M:%S')} total accuracy: {np.mean(val_acc):.2f}%")
 
+class xgbTrainer():
+    def __init__(self):
+        pass
 
-class DNNDataset(Dataset):
+class scDataset(Dataset):
     def __init__(self, adata, ann_key, marker_genes=None):
         self.adata = adata
         self.shape = adata.shape
@@ -129,27 +134,29 @@ class DNNDataset(Dataset):
 
 
 def transform_data_loader(adata, ann_key, marker_genes=None, batch_size=4096):
-    dataset = DNNDataset(adata, ann_key, marker_genes=marker_genes)
+    dataset = scDataset(adata, ann_key, marker_genes=marker_genes)
     train_loader = DataLoader(dataset=dataset, batch_size=batch_size, drop_last=True, shuffle=True, num_workers=16)
     return train_loader
 
 
-def dnn_workflow(data_path,
-                 ann_key,
-                 marker_genes=None,
-                 batch_size=4096,
-                 epochs=200,
-                 gpu="0",
-                 model_name="dnn.bgi",
-                 model_path="./output",
-                 filter_mt=False,
-                 cell_min_counts=300,
-                 gene_min_cells=10,
-                 cell_max_counts=98.):
+def sc_model_train(data_path,
+                   ann_key,
+                   marker_genes=None,
+                   model_choice="xgboost",
+                   batch_size=4096,
+                   epochs=200,
+                   gpu="0",
+                   model_name="dnn.bgi",
+                   model_path="./output",
+                   filter_mt=False,
+                   cell_min_counts=300,
+                   gene_min_cells=10,
+                   cell_max_counts=98.):
     """
     :param data_path: data path, which must be AnnData format.
     :param ann_key: the annotation key in .obs.keys() list.
     :param marker_genes: whether to use marker list data to train the model. If None, all data is used to train the model. Default, None.
+    :param model_choice: model choice, default, "dnn". If "xgboost", the xgboost model is used.
     :param batch_size:
     :param epochs:
     :param gpu: whether to use GPU training model. If None, the CPU training model is used. If it is number, the corresponding GPU training model is invoked.
@@ -188,13 +195,43 @@ def dnn_workflow(data_path,
     else:
         marker_list = marker_genes
 
-    data_loader = transform_data_loader(adata, ann_key, marker_genes, batch_size)
+    if model_choice == "dnn":
+        data_loader = transform_data_loader(adata, ann_key, marker_genes, batch_size)
+        
+        trainer = DNNTrainer(input_dims=adata.shape[1],
+                             num_classes=len(adata.obs[ann_key].cat.categories),
+                             gpu=gpu)
 
-    trainer = DNNTrainer(input_dims=adata.shape[1],
-                         num_classes=len(adata.obs[ann_key].cat.categories),
-                         gpu=gpu)
-
-    trainer.train(data_loader, marker_genes=marker_list, class_nums=class_nums, batch_size=batch_size,
-                  label_names=label_names, epochs=epochs, path=osp.join(model_path, model_name))
-    trainer.validation(data_loader, osp.join(model_path, model_name))
-
+        trainer.train(data_loader, 
+                      marker_genes=marker_list, 
+                      class_nums=class_nums, 
+                      batch_size=batch_size,
+                      label_names=label_names, 
+                      epochs=epochs, 
+                      path=osp.join(model_path, model_name))
+        
+        trainer.validation(data_loader, 
+                           osp.join(model_path, model_name))
+        
+    elif model_choice == 'xgboost':
+        from sklearn.model_selection import train_test_split
+        from sklearn.datasets import load_breast_cancer
+        import pickle
+        adata = adata[:,adata.var_names.isin(marker_list)]
+        X = adata.X.toarray()
+        y = adata.obs[ann_key]
+        
+        dic = {list(set(y))[i]:i for i in range(len(set(y)))}
+        y = [dic[i] for i in y]
+        reverse_dic = {v:k for k,v in dic.items()}
+        # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        
+        model = xgb.XGBClassifier(objective='multi: softmax', n_estimators=100, seed=42)
+        model.fit(X, y)
+        
+        with open(model_path+'/xgboost_model.pkl', 'wb') as f:
+            pickle.dump((model, reverse_dic, marker_list), f)
+        
+    elif model_choice == 'lightgbm':
+        # trainer = lightgbmTrainer()
+        pass

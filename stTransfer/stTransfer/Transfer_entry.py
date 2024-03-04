@@ -58,7 +58,7 @@ def load_data(data_path, filter_mt=True, min_cells=10, min_counts=300, max_perce
     return adata
 
 
-def transfer_from_sc_data(adata, dnn_path, gpu="0"):
+def transfer_from_sc_data(adata, model_choice, model_path, gpu="0"):
     """
     :param adata:
     :param dnn_path: Pre-trained DNN model save path
@@ -70,28 +70,40 @@ def transfer_from_sc_data(adata, dnn_path, gpu="0"):
         device = torch.device("cuda:{}".format(gpu))
     else:
         device = torch.device("cpu")
+    if model_choice == "dnn":
+        checkpoint = torch.load(model_path)
+        dnn_model = checkpoint["model"].to(device)
+        dnn_model.eval()
 
-    checkpoint = torch.load(dnn_path)
-    dnn_model = checkpoint["model"].to(device)
-    dnn_model.eval()
-
-    marker_genes = checkpoint["marker_genes"]
-    gene_indices = adata.var_names.get_indexer(marker_genes)
-    adata_X = np.pad(adata.X, ((0, 0), (0, 1)))[:, gene_indices].copy()
-    norm_factor = np.linalg.norm(adata_X, axis=1, keepdims=True)
-    norm_factor[norm_factor == 0] = 1
-    dnn_inputs = torch.Tensor(adata_X / norm_factor).split(checkpoint["batch_size"])
-    # Inference with DNN model.
-    dnn_predictions = []
-    with torch.no_grad():
-        for batch_idx, inputs in enumerate(dnn_inputs):
-            inputs = inputs.to(device)
-            outputs = dnn_model(inputs)
-            dnn_predictions.append(outputs.detach().cpu().numpy())
-    label_names = checkpoint['label_names']
-    adata.obsm['psuedo_label'] = np.concatenate(dnn_predictions)
-    adata.obs['psuedo_class'] = pd.Categorical([label_names[i] for i in adata.obsm['psuedo_label'].argmax(1)])
-    adata.uns['psuedo_classes'] = label_names
+        marker_genes = checkpoint["marker_genes"]
+        gene_indices = adata.var_names.get_indexer(marker_genes)
+        adata_X = np.pad(adata.X, ((0, 0), (0, 1)))[:, gene_indices].copy()
+        norm_factor = np.linalg.norm(adata_X, axis=1, keepdims=True)
+        norm_factor[norm_factor == 0] = 1
+        dnn_inputs = torch.Tensor(adata_X / norm_factor).split(checkpoint["batch_size"])
+        # Inference with DNN model.
+        dnn_predictions = []
+        with torch.no_grad():
+            for batch_idx, inputs in enumerate(dnn_inputs):
+                inputs = inputs.to(device)
+                outputs = dnn_model(inputs)
+                dnn_predictions.append(outputs.detach().cpu().numpy())
+        label_names = checkpoint['label_names']
+        adata.obsm['psuedo_label'] = np.concatenate(dnn_predictions)
+        adata.obs['psuedo_class'] = pd.Categorical([label_names[i] for i in adata.obsm['psuedo_label'].argmax(1)])
+        adata.uns['psuedo_classes'] = label_names
+        return adata
+    elif model_choice == "xgboost":
+        import pickle
+        with open(model_path, 'rb') as f:
+            model, dic, marker_genes = pickle.load(f)
+        gene_indices = adata.var_names.get_indexer(marker_genes)
+        adata_X = np.pad(adata.X, ((0, 0), (0, 1)))[:, gene_indices].copy()
+        xgboost_predictions = model.predict_proba(adata_X)
+        adata.obsm['psuedo_label'] = xgboost_predictions
+        adata.obs['psuedo_class'] = pd.Categorical([dic[i] for i in adata.obsm['psuedo_label'].argmax(1)])
+        adata.uns['psuedo_classes'] = dic
+        return adata
     return adata
 
 

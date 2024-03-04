@@ -13,7 +13,8 @@ import torch
 import torch.nn as nn
 from torch_geometric.nn import GCNConv, VGAE, GATConv # type: ignore
 from torch_geometric.utils import remove_self_loops, add_self_loops, negative_sampling # type: ignore
-
+import xgboost as xgb # type: ignore
+from xgboost import XGBClassifier # type: ignore
 warnings.filterwarnings("ignore")
 
 class DNNModel(nn.Module):
@@ -34,77 +35,12 @@ class DNNModel(nn.Module):
         )
     def forward(self, x):
         return self.net(x)
-
-class SelfAttention(nn.Module):
-    def __init__(self, input_dim):
-        super(SelfAttention, self).__init__()
-        self.input_dim = input_dim
-        self.query = nn.Linear(input_dim, input_dim)
-        self.key = nn.Linear(input_dim, input_dim)
-        self.value = nn.Linear(input_dim, input_dim)
-    def forward(self, x):
-        q = self.query(x)
-        k = self.key(x)
-        v = self.value(x)
-        attention_weights = torch.softmax(q @ k.transpose(-2, -1) / (self.input_dim ** 0.5), dim=-1)
-        return attention_weights @ v
-
-class DNNModelWithAttention(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, drop_rate=0.5):
-        super(DNNModelWithAttention, self).__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.GELU(),
-            nn.Dropout(p=drop_rate),
-            SelfAttention(hidden_dim),
-            nn.Linear(hidden_dim, int(hidden_dim / 2)),
-            # SelfAttention(int(hidden_dim / 2)),
-            nn.GELU(),
-            nn.Dropout(p=drop_rate),
-            nn.Linear(int(hidden_dim / 2), int(hidden_dim / 4)),
-            # SelfAttention(int(hidden_dim / 4)),
-            nn.GELU(),
-            nn.Dropout(p=drop_rate),
-            nn.Linear(int(hidden_dim / 4), output_dim),
-            nn.Dropout(p=drop_rate)
-            
-        )
-    def forward(self, x):
-        return self.net(x)
-
-class MultiHeadAttention(nn.Module):
-    def __init__(self, input_dim, num_heads):
-        super(MultiHeadAttention, self).__init__()
-        self.num_heads = num_heads
-        self.input_dim = input_dim
-        self.attention = nn.MultiheadAttention(input_dim, num_heads)
-    def forward(self, x):
-        x = x.transpose(0, 1)  # MultiheadAttention需要(batch_size, seq_len, input_dim)的输入
-        attn_output, _ = self.attention(x, x, x)
-        return attn_output.transpose(0, 1)
-
-class DNNModelWithMultiHeadAttention(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, num_heads, drop_rate=0.5):
-        super(DNNModelWithMultiHeadAttention, self).__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            MultiHeadAttention(hidden_dim, num_heads),
-            nn.GELU(),
-            nn.Dropout(p=drop_rate),
-            nn.Linear(hidden_dim, int(hidden_dim / 2)),
-            MultiHeadAttention(int(hidden_dim / 2), num_heads),
-            nn.GELU(),
-            nn.Dropout(p=drop_rate),
-            nn.Linear(int(hidden_dim / 2), int(hidden_dim / 4)),
-            MultiHeadAttention(int(hidden_dim / 4), num_heads),
-            nn.GELU(),
-            nn.Dropout(p=drop_rate),
-            nn.Linear(int(hidden_dim / 4), output_dim),
-            nn.Dropout(p=drop_rate)
-        )
-    def forward(self, x):
-        return self.net(x)
-
+    
+class XGBModel():
+    def __init__(self):
+        super(XGBModel, self).__init__()
+        self.model = XGBClassifier()
+        
 
 class GraphEncoder(nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels):
