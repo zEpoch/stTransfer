@@ -4,12 +4,12 @@
 # @Author  : zhoutao
 # @File    : setup.py.py
 # @Software: VScode
-# @Email   : zhoutao3@genomics.cn
+# @Email   : zhotoa@foxmail.com
 
 import setuptools
 from wheel.bdist_wheel import bdist_wheel
 
-__version__ = "1.0.4"
+__version__ = "1.0.7"
 
 
 class BDistWheel(bdist_wheel):
@@ -29,7 +29,7 @@ requirements = open("requirements.txt").readline()
 
 setuptools.setup(
     name = "stTransfer",
-    version = "1.0.6",
+    version = "1.0.7",
     description = "Transfer learning for spatial transcriptomics data and single-cell RNA-seq data.",
     author = "zhoutao",
     author_email = "zhotoa@foxmail.com",

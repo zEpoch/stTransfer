@@ -3,235 +3,241 @@
 # @Time    : 25/2/24 21:54 PM
 # @Author  : zhoutao3
 # @File    : dnn_entry.py
-# @Email   : zhoutao3@genomics.cn
-import os
-import os.path as osp
-import scanpy as sc # type: ignore
+# @Email   : zhotoa@foxmail.com
+
+from pyexpat import model
 import scipy.sparse as sp
-import torch
-import time
-import pandas as pd
 import numpy as np
-from torch.utils.data import DataLoader, Dataset
-from .cell_type_ann_model import DNNModel # type: ignore
-from .focal_loss import MultiCEFocalLoss # type: ignore
-# import lightgbm as lgb # type: ignore
 import xgboost as xgb # type: ignore
+import anndata as ad
+import os.path as osp
+import pandas as pd
+import scanpy as sc # type: ignore
+import numpy as np
+import scipy.sparse as sp
+import random
+import torch
+import torch_geometric # type: ignore
+from matplotlib import pyplot as plt
 
+from .cell_type_ann_model import SpatialModelTrainer # type: ignore
 
-class DNNTrainer:
-    def __init__(self, input_dims, num_classes, gpu):
-        self.set_device(gpu)
-        self.set_model(input_dims, hidden_dims=1024, output_dims=num_classes)
-        self.set_optimizer()
+from typing import Dict, Optional, Tuple, Sequence,List
 
-    def set_model(self, input_dims, hidden_dims, output_dims):
-        self.model = DNNModel(input_dims, hidden_dims, output_dims).to(self.device)
+def adata_precess(adata: ad.AnnData,):
+    '''
+    adata: ad.AnnData, scRNA-seq data
+    '''
+    data = adata.X.toarray() if sp.issparse(adata.X) else adata.X # Fix: Use .toarray() to convert sparse matrix to dense matrix
+    
+    norm_factor = np.linalg.norm(data, axis=1, keepdims=True) # Fix: Use np.linalg.norm to calculate the norm of each row
+    norm_factor[norm_factor == 0] = 1
+    data = data / norm_factor
+    
+    return data
 
-    def set_optimizer(self):
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3, weight_decay=5e-4)
+def xgboost_train(X: np.ndarray, 
+                  y: np.ndarray, 
+                  save_path: str,
+                  n_fold: int = 10,
+                  gpu: Optional[str] = None,):
+    '''
+    X: np.ndarray, scRNA-seq data
+    y: np.ndarray, cell type annotation
+    save_path: str, model save path
+    n_fold: int, number of folds for xgboost training
+    '''
+    if gpu is not None and torch.cuda.is_available():
+        device = "cuda:{}".format(gpu)
+    else:
+        device = "cpu"
+        
+    from sklearn.model_selection import train_test_split
+    from sklearn.datasets import load_breast_cancer
+    from sklearn.model_selection import KFold
+    import pickle
+    
+    dic = {list(set(y))[i]:i for i in range(len(set(y)))}
+    y = np.array([dic[i] for i in y])
+    reverse_dic = {v:k for k,v in dic.items()}
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    print('########--- model init ---##########')
+    model = xgb.XGBClassifier(objective='multi: softmax', n_estimators=100, seed=42, )
+    kf = KFold(n_splits=n_fold, random_state=42, shuffle=True)
+    # 用于存储每折的分数
+    scores = []
+    print('########--- model train ---##########')
+    count = 0
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
 
-    def set_device(self, gpu=None):
-        if gpu is not None and torch.cuda.is_available():
-            self.device = torch.device("cuda:{}".format(gpu))
-        else:
-            self.device = torch.device("cpu")
+        # 在训练集上训练模型
+        model.fit(X_train, y_train, verbose=2)
 
-    def save_model(self, marker_genes, batch_size, label_names, path):
-        state = {'model': self.model,
-                 'optimizer': self.optimizer.state_dict(),
-                 'marker_genes': marker_genes,
-                 'batch_size': batch_size,
-                 'label_names': label_names
-                 }
-        torch.save(state, path)
-        print(f"  [{time.strftime('%Y-%m-%d %H:%M:%S')} Model is saved in: {path}]")
+        # 在测试集上评估模型
+        score = model.score(X_test, y_test)
+        print(f"Fold {count+1}: {score}")
+        
+        scores.append(score)
+        count += 1
 
-    def train(self, data_loader, marker_genes=None, class_nums=None, batch_size=4096, label_names=None, epochs=200, gamma=2, alpha=.25, path="dnn.bgi"):
-        self.model.train()
-        best_loss = np.inf
-        for epoch in range(epochs):
-            epoch_acc = []
-            epoch_loss = []
-            for idx, data in enumerate(data_loader):
-                inputs, targets = data
-                inputs = inputs.to(self.device)
-                targets = targets.long().to(self.device)
-                output = self.model(inputs)
-                loss = MultiCEFocalLoss(class_num=class_nums, gamma=gamma, alpha=alpha, reduction="mean")(output, targets)
-                train_loss = loss.item()
+    # 打印平均分数
+    print(f"Average score: {np.mean(scores)}")
+    
+    with open(osp.join(save_path,'xgboost_model.pkl'), 'wb') as f:
+        pickle.dump((model, reverse_dic), f)
+    return reverse_dic
+    
+def xgboost_fit(X: np.ndarray,
+                save_path: str,
+                dic: Dict,
+                model_name: str = 'xgboost_model.pkl',):
+    import pickle
+    if model_name:
+        with open(osp.join(save_path, model_name), 'rb') as f:
+            model, dic = pickle.load(f)
+    else:
+        with open(osp.join(save_path, 'xgboost_model.pkl'), 'rb') as f:
+            model, dic = pickle.load(f)
+    
+    psuedo_label = model.predict_proba(X)
+    psuedo_class = [dic[i] for i in psuedo_label.argmax(1)]
+    return psuedo_label, psuedo_class
 
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-
-                total = targets.size(0)
-                prediction = output.argmax(1)
-                correct = prediction.eq(targets).sum().item()
-
-                accuracy = correct / total * 100.
-                epoch_acc.append(accuracy)
-                epoch_loss.append(train_loss)
-            print(f"  [{time.strftime('%Y-%m-%d %H:%M:%S')} Epoch: {epoch+1:3d} Loss: {np.mean(epoch_loss):.5f}, acc: {np.mean(epoch_acc):.2f}%]")
-            if np.mean(epoch_loss) < best_loss:
-                best_loss = np.mean(epoch_loss)
-                self.save_model(marker_genes, batch_size, label_names, path)
-
-    def validation(self, data_loader, model_path):
-        checkpoint = torch.load(model_path)
-        label_names = checkpoint['label_names']
-        dnn_model = checkpoint["model"].to(self.device)
-        dnn_model.eval()
-
-        dnn_predictions = []
-        val_acc = []
-        with torch.no_grad():
-            for idx, data in enumerate(data_loader):
-                inputs, targets = data
-                inputs = inputs.to(self.device)
-                targets = targets.long().to(self.device)
-                outputs = dnn_model(inputs)
-                dnn_predictions.append(outputs.detach().cpu().numpy())
-
-                total = targets.size(0)
-                prediction = outputs.argmax(1)
-                correct = prediction.eq(targets).sum().item()
-                accuracy = correct / total * 100.
-                val_acc.append(accuracy)
-                pseudo_class = pd.Categorical([label_names[i] for i in dnn_predictions[-1].argmax(1)])
-                print(f"  [{time.strftime('%Y-%m-%d %H:%M:%S')} accuracy: {accuracy:.2f}% \npseudo_class: {pseudo_class}")
-            print(f"  [{time.strftime('%Y-%m-%d %H:%M:%S')} total accuracy: {np.mean(val_acc):.2f}%")
-
-class xgbTrainer():
-    def __init__(self):
-        pass
-
-class scDataset(Dataset):
-    def __init__(self, adata, ann_key, marker_genes=None):
-        self.adata = adata
-        self.shape = adata.shape
-        self.ann_key = ann_key
-        if sp.issparse(adata.X):
-            adata.X = adata.X.toarray()
-
-        if marker_genes is None:
-            data = adata.X
-        else:
-            gene_indices = adata.var_names.get_indexer(marker_genes)
-            data = np.pad(adata.X, ((0, 0), (0, 1)))[:, gene_indices].copy()
-
-        norm_factor = np.linalg.norm(data, axis=1, keepdims=True)
-        norm_factor[norm_factor == 0] = 1
-        self.data = data / norm_factor
-
-    def __len__(self):
-        return self.shape[0]
-
-    def __getitem__(self, idx):
-        x = self.data[idx].squeeze()
-        y = self.adata.obs[self.ann_key].cat.codes[idx]
-        return x, y
-
-
-def transform_data_loader(adata, ann_key, marker_genes=None, batch_size=4096):
-    dataset = scDataset(adata, ann_key, marker_genes=marker_genes)
-    train_loader = DataLoader(dataset=dataset, batch_size=batch_size, drop_last=True, shuffle=True, num_workers=16)
-    return train_loader
-
-
-def sc_model_train(data_path,
-                   ann_key,
-                   marker_genes=None,
-                   model_choice="xgboost",
-                   batch_size=4096,
-                   epochs=200,
-                   gpu="0",
-                   model_name="dnn.bgi",
-                   model_path="./output",
-                   filter_mt=False,
-                   cell_min_counts=300,
-                   gene_min_cells=10,
-                   cell_max_counts=98.):
+import os
+ 
+def mkdir(path):
+ 
+	folder = os.path.exists(path)
+	if not folder:                   
+		os.makedirs(path)            
+		print("---  new folder...  ---")
+ 
+	else:
+		print("---  There is this folder!  ---")
+		
+def distribution_fine_tune(X: np.ndarray, 
+                           cell_coo: np.ndarray,
+                           psuedo_label: np.ndarray,
+                           psuedo_classes: Dict,
+                           pca_dim: int = 200, 
+                           k_graph: int = 30, 
+                           edge_weight: bool = True, 
+                           epochs: int = 100, 
+                           w_cls: int = 50, 
+                           w_dae: int = 1, 
+                           w_gae: int = 1,
+                           gpu: str = "0", 
+                           save_path: str = "./output"):
     """
-    :param data_path: data path, which must be AnnData format.
-    :param ann_key: the annotation key in .obs.keys() list.
-    :param marker_genes: whether to use marker list data to train the model. If None, all data is used to train the model. Default, None.
-    :param model_choice: model choice, default, "dnn". If "xgboost", the xgboost model is used.
-    :param batch_size:
-    :param epochs:
-    :param gpu: whether to use GPU training model. If None, the CPU training model is used. If it is number, the corresponding GPU training model is invoked.
-    :param model_name:
-    :param model_path: save dnn model path.
-    :param filter_mt: whether to filter MT- gene.
-    :param cell_min_counts:
-    :param gene_min_cells:
-    :param cell_max_counts: filter cell counts outliers.  If the value is 100, no filtering is performed. Range: (0, 100).
+    :param adata:
+    :param pca_dim: PCA dims, default=200
+    :param k_graph: neighbors number, default=30
+    :param edge_weight: Add edge weight to the graph model, default=True
+    :param epochs: GCN training epochs, default=200
+    :param w_cls: class num weight, default=20
+    :param w_dae: dnn weight
+    :param w_gae: gcn weight
+    :param gpu: gpu number or None for cpu
+    :param save_path: results save path
     :return:
     """
-    os.makedirs(model_path, exist_ok=True)
-    assert data_path.endswith(".h5ad"), "Error, Got an invalid DATA_PATH!"
-    adata = sc.read_h5ad(data_path)
-    print(f"  [Data Info] \n {adata}")
-    assert batch_size <= adata.shape[0], "Error, Batch size cannot be larger than the data set row."
-
-    if filter_mt:
-        adata.var["mt"] = adata.var_names.str.startswith(["MT-", "mt-", "Mt-"])
-        sc.pp.calculate_qc_metrics(adata, qc_vars=["mt"], inplace=True)
-        adata = adata[adata.obs["pct_counts_mt"] < 10].copy()
-    if cell_min_counts > 0:
-        sc.pp.filter_cells(adata, min_counts=cell_min_counts)
-    if gene_min_cells > 0:
-        sc.pp.filter_genes(adata, min_cells=gene_min_cells)
-    if cell_max_counts < 100:
-        max_count = np.percentile(adata.X.sum(1).reshape(-1).tolist()[0], cell_max_counts)   
-        sc.pp.filter_cells(adata, max_counts=max_count)
-
-    print(f"  [After Preprocessing Data Info] \n {adata}")
-    adata.obs[ann_key] = adata.obs[ann_key].astype('category')
-    label_names = adata.obs[ann_key].cat.categories.tolist()
-    class_nums = len(adata.obs[ann_key].cat.categories)
-    if marker_genes is None:
-        marker_list = adata.var_names.tolist()
+    if gpu is not None and torch.cuda.is_available():
+        device = torch.device("cuda:{}".format(gpu))
     else:
-        marker_list = marker_genes
+        device = torch.device("cpu")
 
-    if model_choice == "dnn":
-        data_loader = transform_data_loader(adata, ann_key, marker_genes, batch_size)
-        
-        trainer = DNNTrainer(input_dims=adata.shape[1],
-                             num_classes=len(adata.obs[ann_key].cat.categories),
-                             gpu=gpu)
+    print("========> Model Training...")
+    
+    gene_mat = torch.Tensor(X)
+    if pca_dim:
+        u, s, v = torch.pca_lowrank(gene_mat, pca_dim)
+        gene_mat = torch.matmul(gene_mat, v)
+    # u, s, v = torch.pca_lowrank(gene_mat, pca_dim)
+    # gene_mat = torch.matmul(gene_mat, v)
+    cell_coo = torch.Tensor(cell_coo) # type: ignore
+    data = torch_geometric.data.Data(x=gene_mat, pos=cell_coo) # type: ignore
+    data = torch_geometric.transforms.KNNGraph(k=k_graph, loop=True)(data) # type: ignore
+    data.y = torch.Tensor(psuedo_label)
 
-        trainer.train(data_loader, 
-                      marker_genes=marker_list, 
-                      class_nums=class_nums, 
-                      batch_size=batch_size,
-                      label_names=label_names, 
-                      epochs=epochs, 
-                      path=osp.join(model_path, model_name))
-        
-        trainer.validation(data_loader, 
-                           osp.join(model_path, model_name))
-        
-    elif model_choice == 'xgboost':
-        from sklearn.model_selection import train_test_split
-        from sklearn.datasets import load_breast_cancer
-        import pickle
-        adata = adata[:,adata.var_names.isin(marker_list)]
-        X = adata.X.toarray()
-        y = adata.obs[ann_key]
-        
-        dic = {list(set(y))[i]:i for i in range(len(set(y)))}
-        y = [dic[i] for i in y]
-        reverse_dic = {v:k for k,v in dic.items()}
-        # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        
-        model = xgb.XGBClassifier(objective='multi: softmax', n_estimators=100, seed=42)
-        model.fit(X, y)
-        
-        with open(model_path+'/xgboost_model.pkl', 'wb') as f:
-            pickle.dump((model, reverse_dic, marker_list), f)
-        
-    elif model_choice == 'lightgbm':
-        # trainer = lightgbmTrainer()
-        pass
+    # Make distances as edge weights.
+    if edge_weight:
+        data = torch_geometric.transforms.Distance()(data) # type: ignore
+        data.edge_weight = 1 - data.edge_attr[:, 0]
+    else:
+        data.edge_weight = torch.ones(data.edge_index.size(1))
+
+    # Train self-supervision model.
+    input_dim = data.num_features
+    num_classes = len(psuedo_classes)
+    trainer = SpatialModelTrainer(input_dim, num_classes, device=device)
+    trainer.train(data, epochs, w_cls, w_dae, w_gae)
+    trainer.save_checkpoint(osp.join(save_path, "graph_finetune.bgi"))
+
+    # Inference.
+    print('\n==> Inferencing...')
+    predictions = trainer.valid(data)
+    celltype_pred = pd.Categorical([psuedo_classes[i] for i in predictions])
+    celltype_pred.csv(osp.join(save_path, 'celltype_pred.csv'))
+    return celltype_pred
+
+    '''
+    # Save results.
+    result = pd.DataFrame({'cell': adata.obs_names.tolist(), 'celltype_pred': celltype_pred})
+    result.to_csv(osp.join(save_path, "model.csv"), index=False)
+    adata.obs['celltype_pred'] = pd.Categorical(celltype_pred) # type: ignore
+    # adata.X = adata_X_sparse_backup
+    # --------------------------------------------------
+    adata.obsm["X_pca"] = gene_mat.detach().cpu().numpy()
+    adata.uns = None
+    adata.write(osp.join(save_path, "adata.h5ad"))
+
+    # Save visualization.
+    spot_size = 30
+    psuedo_top100 = adata.obs['psuedo_class'].to_numpy()
+    other_classes = list(pd.value_counts(adata.obs['psuedo_class'])[100:].index)
+    psuedo_top100[adata.obs['psuedo_class'].isin(other_classes)] = 'Others'
+    adata.obs['psuedo_top100'] = pd.Categorical(psuedo_top100)
+    sc.pl.spatial(adata, img_key=None, color=['psuedo_top100'], spot_size=spot_size, show=False)
+    plt.savefig(osp.join(save_path, "psuedo_top100.pdf"), bbox_inches='tight', dpi=150)
+    sc.pl.spatial(adata, img_key=None, color=['celltype_pred'], spot_size=spot_size, show=False)
+    plt.savefig(osp.join(save_path, "celltype_pred.pdf"), bbox_inches='tight', dpi=150)
+    print("Done!")
+    '''
+
+def sc_model_train_test(sc_adata: ad.AnnData,
+                        st_adata: ad.AnnData,
+                        sc_ann_key: str,
+                        save_path: str,
+                        marker_genes: Optional[List[str]] = None,
+                        st_adata_spatial_key: str = 'spatial'):
+    mkdir(save_path)
+    print('########--- pre process ---##########')
+    sc_adata_var_names = sc_adata.var_names.tolist()
+    st_adata_var_names = st_adata.var_names.tolist()
+    common_genes = list(set(sc_adata_var_names) & set(st_adata_var_names))
+    assert len(common_genes) > 0, 'No common genes between scRNA-seq and spatial transcriptomics data'
+    sc_adata = sc_adata[:, sc_adata.var_names.isin(common_genes)]
+    st_adata = st_adata[:, st_adata.var_names.isin(common_genes)]
+    # re-index gene order
+    sc_adata = sc_adata[:, np.array(common_genes).tolist()]
+    st_adata = st_adata[:, np.array(common_genes).tolist()]
+    
+    sc_X = adata_precess(sc_adata)
+    ST_X = adata_precess(st_adata)
+    sc_y = np.array(sc_adata.obs[sc_ann_key].to_list())
+    print('########--- start trian ---##########')
+    reverse_dic = xgboost_train(sc_X, sc_y, save_path)  # Fix: Pass the correct arguments to xgboost_train
+    
+    st_y = xgboost_fit(ST_X, dic = reverse_dic, save_path = save_path)  # Fix: Pass the correct arguments to xgboost_fit
+    pseudo_label = pd.DataFrame([reverse_dic[i] for i in st_y], columns = reverse_dic)
+    pseudo_label.to_csv(osp.join(save_path, 'pseudo_label.csv'))
+    
+    cell_coo = st_adata.obsm[st_adata_spatial_key]
+    distribution_fine_tune(ST_X, 
+                           cell_coo = cell_coo, 
+                           gpu = None,
+                           psuedo_label = pseudo_label,  # Add the missing argument "psuedo_label"
+                           psuedo_classes = reverse_dic,  # Add the missing argument "psuedo_classes"
+                           save_path=save_path)

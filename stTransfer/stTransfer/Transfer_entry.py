@@ -4,6 +4,7 @@
 # @Author  : zhoutao3
 # @File    : dnn_entry.py
 # @Email   : zhoutao3@genomics.cn
+'''
 import os.path as osp
 import pandas as pd
 import scanpy as sc # type: ignore
@@ -169,6 +170,7 @@ def distribution_fine_tune(adata, pca_dim=200, k_graph=30, edge_weight=True, epo
 
     # --------------------------------------------------
     adata.obsm["X_pca"] = gene_mat.detach().cpu().numpy()
+    adata.uns = None
     adata.write(osp.join(save_path, "adata.h5ad"))
 
     # Save visualization.
@@ -182,3 +184,4 @@ def distribution_fine_tune(adata, pca_dim=200, k_graph=30, edge_weight=True, epo
     sc.pl.spatial(adata, img_key=None, color=['celltype_pred'], spot_size=spot_size, show=False)
     plt.savefig(osp.join(save_path, "celltype_pred.pdf"), bbox_inches='tight', dpi=150)
     print("Done!")
+'''
