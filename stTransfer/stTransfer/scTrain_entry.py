@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 25/2/24 21:54 PM
 # @Author  : zhoutao3
-# @File    : dnn_entry.py
+# @File    : *.py
 # @Email   : zhotoa@foxmail.com
 
 from pyexpat import model
@@ -179,32 +179,8 @@ def distribution_fine_tune(X: np.ndarray,
     print('\n==> Inferencing...')
     predictions = trainer.valid(data)
     celltype_pred = pd.Categorical([psuedo_classes[i] for i in predictions])
-    celltype_pred.csv(osp.join(save_path, 'celltype_pred.csv'))
+    celltype_pred.to_csv(osp.join(save_path, 'celltype_pred.csv'))
     return celltype_pred
-
-    '''
-    # Save results.
-    result = pd.DataFrame({'cell': adata.obs_names.tolist(), 'celltype_pred': celltype_pred})
-    result.to_csv(osp.join(save_path, "model.csv"), index=False)
-    adata.obs['celltype_pred'] = pd.Categorical(celltype_pred) # type: ignore
-    # adata.X = adata_X_sparse_backup
-    # --------------------------------------------------
-    adata.obsm["X_pca"] = gene_mat.detach().cpu().numpy()
-    adata.uns = None
-    adata.write(osp.join(save_path, "adata.h5ad"))
-
-    # Save visualization.
-    spot_size = 30
-    psuedo_top100 = adata.obs['psuedo_class'].to_numpy()
-    other_classes = list(pd.value_counts(adata.obs['psuedo_class'])[100:].index)
-    psuedo_top100[adata.obs['psuedo_class'].isin(other_classes)] = 'Others'
-    adata.obs['psuedo_top100'] = pd.Categorical(psuedo_top100)
-    sc.pl.spatial(adata, img_key=None, color=['psuedo_top100'], spot_size=spot_size, show=False)
-    plt.savefig(osp.join(save_path, "psuedo_top100.pdf"), bbox_inches='tight', dpi=150)
-    sc.pl.spatial(adata, img_key=None, color=['celltype_pred'], spot_size=spot_size, show=False)
-    plt.savefig(osp.join(save_path, "celltype_pred.pdf"), bbox_inches='tight', dpi=150)
-    print("Done!")
-    '''
 
 def sc_model_train_test(sc_adata: ad.AnnData,
                         st_adata: ad.AnnData,
@@ -230,14 +206,13 @@ def sc_model_train_test(sc_adata: ad.AnnData,
     print('########--- start trian ---##########')
     reverse_dic = xgboost_train(sc_X, sc_y, save_path)  # Fix: Pass the correct arguments to xgboost_train
     
-    st_y = xgboost_fit(ST_X, dic = reverse_dic, save_path = save_path)  # Fix: Pass the correct arguments to xgboost_fit
-    pseudo_label = pd.DataFrame([reverse_dic[i] for i in st_y], columns = reverse_dic)
-    pseudo_label.to_csv(osp.join(save_path, 'pseudo_label.csv'))
-    
+    psuedo_label, psuedo_class = xgboost_fit(ST_X, dic = reverse_dic, save_path = save_path)  # Fix: Pass the correct arguments to xgboost_fit
+    pd.DataFrame(psuedo_label).to_csv(osp.join(save_path, 'psuedo_label.csv'))
+    pd.DataFrame(psuedo_class).to_csv(osp.join(save_path, 'psuedo_class.csv'))
     cell_coo = st_adata.obsm[st_adata_spatial_key]
     distribution_fine_tune(ST_X, 
                            cell_coo = cell_coo, 
                            gpu = None,
-                           psuedo_label = pseudo_label,  # Add the missing argument "psuedo_label"
+                           psuedo_label = psuedo_label,  # Add the missing argument "psuedo_label"
                            psuedo_classes = reverse_dic,  # Add the missing argument "psuedo_classes"
                            save_path=save_path)
