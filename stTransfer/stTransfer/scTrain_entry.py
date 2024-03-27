@@ -121,10 +121,10 @@ def distribution_fine_tune(X: np.ndarray,
                            cell_coo: np.ndarray,
                            psuedo_label: np.ndarray,
                            psuedo_classes: Dict,
-                           pca_dim: int = 200, 
+                           pca_dim: int = 500, 
                            k_graph: int = 30, 
                            edge_weight: bool = True, 
-                           epochs: int = 100, 
+                           epochs: int = 200, 
                            w_cls: int = 50, 
                            w_dae: int = 1, 
                            w_gae: int = 1,
@@ -179,7 +179,8 @@ def distribution_fine_tune(X: np.ndarray,
     print('\n==> Inferencing...')
     predictions = trainer.valid(data)
     celltype_pred = pd.Categorical([psuedo_classes[i] for i in predictions])
-    celltype_pred.to_csv(osp.join(save_path, 'celltype_pred.csv'))
+    pd.DataFrame([psuedo_classes[i] for i in predictions]).to_csv(osp.join(save_path, 'celltype_pred.csv'))
+    # celltype_pred.to_csv(osp.join(save_path, 'celltype_pred.csv'))
     return celltype_pred
 
 def sc_model_train_test(sc_adata: ad.AnnData,
@@ -187,7 +188,9 @@ def sc_model_train_test(sc_adata: ad.AnnData,
                         sc_ann_key: str,
                         save_path: str,
                         marker_genes: Optional[List[str]] = None,
-                        st_adata_spatial_key: str = 'spatial'):
+                        st_adata_spatial_key: str = 'spatial',
+                        finetune_epochs: int = 200,
+                        finutune_pca_dim: int = 500,):
     mkdir(save_path)
     print('########--- pre process ---##########')
     sc_adata_var_names = sc_adata.var_names.tolist()
@@ -215,4 +218,6 @@ def sc_model_train_test(sc_adata: ad.AnnData,
                            gpu = None,
                            psuedo_label = psuedo_label,  # Add the missing argument "psuedo_label"
                            psuedo_classes = reverse_dic,  # Add the missing argument "psuedo_classes"
-                           save_path=save_path)
+                           save_path=save_path,
+                           epochs = finetune_epochs,
+                           pca_dim = finutune_pca_dim)
