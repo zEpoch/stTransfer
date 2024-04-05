@@ -11,12 +11,28 @@ import warnings
 import torch.nn.functional as F
 import torch
 import torch.nn as nn
-from torch_geometric.nn import GCNConv, VGAE, GATConv # type: ignore
+from torch_geometric.nn import GCNConv, VGAE, GATConv,GATv2Conv,GraphConv,GINConv, SAGEConv # type: ignore
 from torch_geometric.utils import remove_self_loops, add_self_loops, negative_sampling # type: ignore
 import xgboost as xgb # type: ignore
 from xgboost import XGBClassifier # type: ignore
 warnings.filterwarnings("ignore")
 
+'''
+PyTorch Geometric (PyG) 提供了许多图神经网络层，其中一些可以直接替换 GCNConv 而不需要更改参数。以下是一些例子：
+
+ChebConv: ChebNet 卷积层，需要额外的参数 K，表示使用的切比雪夫多项式的阶数。
+
+SAGEConv: GraphSAGE 卷积层。
+
+GATConv: 图注意力网络 (GAT) 卷积层。发现很容易 聚合 临近节点的信息
+
+GINConv: 图同构网络 (GIN) 卷积层。无法正确调用
+
+GraphConv: 图卷积网络层，这是一个更一般的图卷积操作。发现 Psuedo-Acc 非常的低
+
+ARMAConv: 自回归移动平均 (ARMA) 卷积层。
+
+'''
 
 class GraphEncoder(nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels):
@@ -24,17 +40,43 @@ class GraphEncoder(nn.Module):
         # self.gc_feat = GCNConv(in_channels, hidden_channels)
         # self.gc_mean = GCNConv(hidden_channels, out_channels)
         # self.gc_logstd = GCNConv(hidden_channels, out_channels)
+        # self.gc_feat = GATConv(in_channels, hidden_channels)
+        # self.gc_mean = GATConv(hidden_channels, out_channels)
+        # self.gc_logstd = GATConv(hidden_channels, out_channels)
+        self.gc_feat = GCNConv(in_channels, hidden_channels,)
+        self.gc_mean = GATConv(hidden_channels, out_channels, heads=8, dropout=0.4)
+        self.gc_logstd = GCNConv(hidden_channels, out_channels)
         
-        self.gc_feat = GATConv(in_channels, hidden_channels)
-        self.gc_mean = GATConv(hidden_channels, out_channels)
-        self.gc_logstd = GATConv(hidden_channels, out_channels)
-
     def forward(self, x, edge_index, edge_weight):
         x = self.gc_feat(x, edge_index, edge_weight).relu()
         mean = self.gc_mean(x, edge_index, edge_weight)
         logstd = self.gc_logstd(x, edge_index, edge_weight)
         return mean, logstd
+'''
+from torch.nn import Sequential, Linear, ReLU
 
+class GraphEncoder(nn.Module):
+    def __init__(self, in_channels, hidden_channels, out_channels):
+        super(GraphEncoder, self).__init__()
+
+        nn1 = Sequential(Linear(in_channels, hidden_channels), ReLU(), Linear(hidden_channels, hidden_channels))
+        self.gc_feat = GINConv(nn1)
+        # x = self.gc_feat(x, edge_index)
+
+        nn2 = Sequential(Linear(hidden_channels, out_channels), ReLU(), Linear(out_channels, out_channels))
+        self.gc_mean = GINConv(nn2)
+        # mean = self.gc_mean(x, edge_index)
+
+        nn3 = Sequential(Linear(hidden_channels, out_channels), ReLU(), Linear(out_channels, out_channels))
+        self.gc_logstd = GINConv(nn3)
+        # logstd = self.gc_logstd(x, edge_index)
+
+    def forward(self, x, edge_index):
+        x = self.gc_feat(x, edge_index).relu()
+        mean = self.gc_mean(x, edge_index)
+        logstd = self.gc_logstd(x, edge_index)
+        return mean, logstd
+'''
 
 def full_block(in_features, out_features, drop_rate=0.2):
     return nn.Sequential(

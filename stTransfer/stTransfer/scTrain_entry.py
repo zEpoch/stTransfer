@@ -189,7 +189,7 @@ def sc_model_train_test(sc_adata: ad.AnnData,
                         save_path: str,
                         marker_genes: Optional[List[str]] = None,
                         st_adata_spatial_key: str = 'spatial',
-                        finetune_epochs: int = 200,
+                        finetune_epochs: int = 50,
                         finutune_pca_dim: int = 500,):
     mkdir(save_path)
     print('########--- pre process ---##########')
