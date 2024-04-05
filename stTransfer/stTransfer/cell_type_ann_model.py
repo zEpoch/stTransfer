@@ -44,7 +44,7 @@ class GraphEncoder(nn.Module):
         # self.gc_mean = GATConv(hidden_channels, out_channels)
         # self.gc_logstd = GATConv(hidden_channels, out_channels)
         self.gc_feat = GCNConv(in_channels, hidden_channels,)
-        self.gc_mean = GATConv(hidden_channels, out_channels, heads=8, dropout=0.4)
+        self.gc_mean = GATConv(hidden_channels, out_channels)
         self.gc_logstd = GCNConv(hidden_channels, out_channels)
         
     def forward(self, x, edge_index, edge_weight):
