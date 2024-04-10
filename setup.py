@@ -37,17 +37,14 @@ install_requires = [
     "scikit-learn>=1.0.2",
     "scipy>=1.8.0",
     "seaborn>=0.11.2",
-    "torch==1.11.0+cu113",
-    "torch-cluster==1.6.0",
-    "torch-geometric==2.0.4",
-    "torch-scatter==2.0.9",
-    "torch-sparse==0.6.13",
+    "torch>=1.11.0",
+    "torch-geometric>=2.0.2",
     "xgboost>=2.0.0"
     
 ]
 setuptools.setup(
     name = "stTransfer",
-    version = "1.0.9",
+    version = "1.0.13",
     description = "Transfer learning for spatial transcriptomics data and single-cell RNA-seq data.",
     author = "zhoutao",
     author_email = "zhotoa@foxmail.com",

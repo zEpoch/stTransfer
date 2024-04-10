@@ -48,7 +48,7 @@ def xgboost_train(X: np.ndarray,
     n_fold: int, number of folds for xgboost training
     '''
     if gpu is not None and torch.cuda.is_available():
-        device = "cuda:{}".format(gpu)
+        device = "cuda"
     else:
         device = "cpu"
         
@@ -62,7 +62,7 @@ def xgboost_train(X: np.ndarray,
     reverse_dic = {v:k for k,v in dic.items()}
     # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     print('########--- model init ---##########')
-    model = xgb.XGBClassifier(objective='multi: softmax', n_estimators=100, seed=42, )
+    model = xgb.XGBClassifier(objective='multi: softmax', n_estimators=100, seed=42, device=device )
     kf = KFold(n_splits=n_fold, random_state=42, shuffle=True)
     # 用于存储每折的分数
     scores = []
@@ -128,7 +128,7 @@ def distribution_fine_tune(X: np.ndarray,
                            w_cls: int = 50, 
                            w_dae: int = 1, 
                            w_gae: int = 1,
-                           gpu: str = "0", 
+                           gpu: Optional[str] = None, 
                            save_path: str = "./output"):
     """
     :param adata:
@@ -190,7 +190,8 @@ def sc_model_train_test(sc_adata: ad.AnnData,
                         marker_genes: Optional[List[str]] = None,
                         st_adata_spatial_key: str = 'spatial',
                         finetune_epochs: int = 50,
-                        finutune_pca_dim: int = 500,):
+                        finutune_pca_dim: int = 500,
+                        gpu: Optional[str] = None,):
     mkdir(save_path)
     print('########--- pre process ---##########')
     sc_adata_var_names = sc_adata.var_names.tolist()
@@ -207,17 +208,17 @@ def sc_model_train_test(sc_adata: ad.AnnData,
     ST_X = adata_precess(st_adata)
     sc_y = np.array(sc_adata.obs[sc_ann_key].to_list())
     print('########--- start trian ---##########')
-    reverse_dic = xgboost_train(sc_X, sc_y, save_path)  # Fix: Pass the correct arguments to xgboost_train
+    reverse_dic = xgboost_train(sc_X, sc_y, save_path, gpu=None if gpu is None else gpu)  # Fix: Handle the case when gpu is None
     
-    psuedo_label, psuedo_class = xgboost_fit(ST_X, dic = reverse_dic, save_path = save_path)  # Fix: Pass the correct arguments to xgboost_fit
+    psuedo_label, psuedo_class = xgboost_fit(ST_X, dic=reverse_dic, save_path=save_path)  # Fix: Pass the correct arguments to xgboost_fit
     pd.DataFrame(psuedo_label).to_csv(osp.join(save_path, 'psuedo_label.csv'))
     pd.DataFrame(psuedo_class).to_csv(osp.join(save_path, 'psuedo_class.csv'))
     cell_coo = st_adata.obsm[st_adata_spatial_key]
     distribution_fine_tune(ST_X, 
-                           cell_coo = cell_coo, 
-                           gpu = None,
-                           psuedo_label = psuedo_label,  # Add the missing argument "psuedo_label"
-                           psuedo_classes = reverse_dic,  # Add the missing argument "psuedo_classes"
+                           cell_coo=cell_coo, 
+                           psuedo_label=psuedo_label,  # Add the missing argument "psuedo_label"
+                           psuedo_classes=reverse_dic,  # Add the missing argument "psuedo_classes"
                            save_path=save_path,
-                           epochs = finetune_epochs,
-                           pca_dim = finutune_pca_dim)
+                           epochs=finetune_epochs,
+                           pca_dim=finutune_pca_dim,
+                           gpu=None if gpu is None else gpu)  # Fix: Handle the case when gpu is None
