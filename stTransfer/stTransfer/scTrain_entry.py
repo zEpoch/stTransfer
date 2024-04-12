@@ -183,7 +183,7 @@ def distribution_fine_tune(X: np.ndarray,
     pd.DataFrame(outputs, columns=list(psuedo_classes.values())).to_csv(osp.join(save_path, 'outputs.csv'))
     pd.DataFrame([psuedo_classes[i] for i in predictions]).to_csv(osp.join(save_path, 'celltype_pred.csv'))
     # celltype_pred.to_csv(osp.join(save_path, 'celltype_pred.csv'))
-    return celltype_pred
+    return None
 
 def sc_model_train_test(sc_adata: ad.AnnData,
                         st_adata: ad.AnnData,
