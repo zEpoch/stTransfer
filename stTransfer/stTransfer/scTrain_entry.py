@@ -5,7 +5,9 @@
 # @File    : *.py
 # @Email   : zhotoa@foxmail.com
 
+from email import header
 from pyexpat import model
+from requests import head
 import scipy.sparse as sp
 import numpy as np
 import xgboost as xgb # type: ignore
@@ -177,8 +179,8 @@ def distribution_fine_tune(X: np.ndarray,
 
     # Inference.
     print('\n==> Inferencing...')
-    predictions = trainer.valid(data)
-    celltype_pred = pd.Categorical([psuedo_classes[i] for i in predictions])
+    predictions, outputs = trainer.valid(data)
+    pd.DataFrame(outputs, columns=list(psuedo_classes.values())).to_csv(osp.join(save_path, 'outputs.csv'))
     pd.DataFrame([psuedo_classes[i] for i in predictions]).to_csv(osp.join(save_path, 'celltype_pred.csv'))
     # celltype_pred.to_csv(osp.join(save_path, 'celltype_pred.csv'))
     return celltype_pred
@@ -211,7 +213,9 @@ def sc_model_train_test(sc_adata: ad.AnnData,
     reverse_dic = xgboost_train(sc_X, sc_y, save_path, gpu=None if gpu is None else gpu)  # Fix: Handle the case when gpu is None
     
     psuedo_label, psuedo_class = xgboost_fit(ST_X, dic=reverse_dic, save_path=save_path)  # Fix: Pass the correct arguments to xgboost_fit
-    pd.DataFrame(psuedo_label).to_csv(osp.join(save_path, 'psuedo_label.csv'))
+    psuedo_labelpd = pd.DataFrame(psuedo_label)
+    psuedo_labelpd.columns = list(reverse_dic.values())  # Fix: Convert reverse_dic.values() to a list
+    psuedo_labelpd.to_csv(osp.join(save_path, 'psuedo_label.csv'), )
     pd.DataFrame(psuedo_class).to_csv(osp.join(save_path, 'psuedo_class.csv'))
     cell_coo = st_adata.obsm[st_adata_spatial_key]
     distribution_fine_tune(ST_X, 

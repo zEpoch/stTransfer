@@ -45,7 +45,7 @@ class GraphEncoder(nn.Module):
         # self.gc_logstd = GATConv(hidden_channels, out_channels)
         self.gc_feat = GCNConv(in_channels, hidden_channels,)
         self.gc_mean = GATConv(hidden_channels, out_channels)
-        self.gc_logstd = GCNConv(hidden_channels, out_channels)
+        self.gc_logstd = GATConv(hidden_channels, out_channels)
         
     def forward(self, x, edge_index, edge_weight):
         x = self.gc_feat(x, edge_index, edge_weight).relu()
@@ -207,4 +207,5 @@ class SpatialModelTrainer:
             outputs, _, _ = self.model(inputs, edge_index, edge_weight) # type: ignore
             predictions = outputs.argmax(1)
         predictions = predictions.detach().cpu().numpy()
-        return predictions
+        outputs = outputs.detach().cpu().numpy()
+        return predictions,outputs
