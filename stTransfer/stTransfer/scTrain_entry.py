@@ -193,6 +193,7 @@ def sc_model_train_test(sc_adata: ad.AnnData,
                         st_adata_spatial_key: str = 'spatial',
                         finetune_epochs: int = 50,
                         finutune_pca_dim: int = 500,
+                        finutune_w_cls: int = 20,
                         gpu: Optional[str] = None,):
     mkdir(save_path)
     print('########--- pre process ---##########')
@@ -225,4 +226,5 @@ def sc_model_train_test(sc_adata: ad.AnnData,
                            save_path=save_path,
                            epochs=finetune_epochs,
                            pca_dim=finutune_pca_dim,
+                           w_cls=finutune_w_cls,
                            gpu=None if gpu is None else gpu)  # Fix: Handle the case when gpu is None
