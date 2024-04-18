@@ -44,7 +44,7 @@ install_requires = [
 ]
 setuptools.setup(
     name = "stTransfer",
-    version = "1.0.16",
+    version = "1.0.17",
     description = "Transfer learning for spatial transcriptomics data and single-cell RNA-seq data.",
     author = "zhoutao",
     author_email = "zhotoa@foxmail.com",

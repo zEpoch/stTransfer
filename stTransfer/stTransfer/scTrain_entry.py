@@ -190,10 +190,13 @@ def sc_model_train_test(sc_adata: ad.AnnData,
                         sc_ann_key: str,
                         save_path: str,
                         marker_genes: Optional[List[str]] = None,
+                        k_n_fold: int = 10,
                         st_adata_spatial_key: str = 'spatial',
                         finetune_epochs: int = 50,
                         finutune_pca_dim: int = 500,
                         finutune_w_cls: int = 20,
+                        finutune_w_dae: int = 1,
+                        finutune_w_gae: int = 1,
                         gpu: Optional[str] = None,):
     mkdir(save_path)
     print('########--- pre process ---##########')
@@ -211,7 +214,7 @@ def sc_model_train_test(sc_adata: ad.AnnData,
     ST_X = adata_precess(st_adata)
     sc_y = np.array(sc_adata.obs[sc_ann_key].to_list())
     print('########--- start trian ---##########')
-    reverse_dic = xgboost_train(sc_X, sc_y, save_path, gpu=None if gpu is None else gpu)  # Fix: Handle the case when gpu is None
+    reverse_dic = xgboost_train(sc_X, sc_y, save_path, n_fold = k_n_fold, gpu=None if gpu is None else gpu)  # Fix: Handle the case when gpu is None
     
     psuedo_label, psuedo_class = xgboost_fit(ST_X, dic=reverse_dic, save_path=save_path)  # Fix: Pass the correct arguments to xgboost_fit
     psuedo_labelpd = pd.DataFrame(psuedo_label)
@@ -227,4 +230,6 @@ def sc_model_train_test(sc_adata: ad.AnnData,
                            epochs=finetune_epochs,
                            pca_dim=finutune_pca_dim,
                            w_cls=finutune_w_cls,
+                           w_dae = finutune_w_dae,
+                           w_gae = finutune_w_gae,
                            gpu=None if gpu is None else gpu)  # Fix: Handle the case when gpu is None
