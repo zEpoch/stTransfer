@@ -5,9 +5,7 @@
 # @File    : *.py
 # @Email   : zhotoa@foxmail.com
 
-from email import header
-from pyexpat import model
-from requests import head
+
 import scipy.sparse as sp
 import numpy as np
 import xgboost as xgb # type: ignore
@@ -21,7 +19,6 @@ import random
 import torch
 import torch_geometric # type: ignore
 from matplotlib import pyplot as plt
-
 from .cell_type_ann_model import SpatialModelTrainer # type: ignore
 
 from typing import Dict, Optional, Tuple, Sequence,List
@@ -130,6 +127,7 @@ def distribution_fine_tune(X: np.ndarray,
                            w_cls: int = 50, 
                            w_dae: int = 1, 
                            w_gae: int = 1,
+                           KD_T: float = 1.0,
                            gpu: Optional[str] = None, 
                            save_path: str = "./output"):
     """
@@ -173,7 +171,7 @@ def distribution_fine_tune(X: np.ndarray,
     # Train self-supervision model.
     input_dim = data.num_features
     num_classes = len(psuedo_classes)
-    trainer = SpatialModelTrainer(input_dim, num_classes, device=device)
+    trainer = SpatialModelTrainer(input_dim, num_classes, device=device, KD_T = KD_T)
     trainer.train(data, epochs, w_cls, w_dae, w_gae)
     trainer.save_checkpoint(osp.join(save_path, "graph_finetune.bgi"))
 
@@ -184,7 +182,7 @@ def distribution_fine_tune(X: np.ndarray,
     pd.DataFrame([psuedo_classes[i] for i in predictions]).to_csv(osp.join(save_path, 'celltype_pred.csv'))
     # celltype_pred.to_csv(osp.join(save_path, 'celltype_pred.csv'))
     return None
-
+'''
 def sc_model_train_test(sc_adata: ad.AnnData,
                         st_adata: ad.AnnData,
                         sc_ann_key: str,
@@ -210,6 +208,8 @@ def sc_model_train_test(sc_adata: ad.AnnData,
     sc_adata = sc_adata[:, np.array(common_genes).tolist()]
     st_adata = st_adata[:, np.array(common_genes).tolist()]
     
+    st_adata = gaussian_smooth_adaptively(adata = st_adata)
+    
     sc_X = adata_precess(sc_adata)
     ST_X = adata_precess(st_adata)
     sc_y = np.array(sc_adata.obs[sc_ann_key].to_list())
@@ -233,3 +233,4 @@ def sc_model_train_test(sc_adata: ad.AnnData,
                            w_dae = finutune_w_dae,
                            w_gae = finutune_w_gae,
                            gpu=None if gpu is None else gpu)  # Fix: Handle the case when gpu is None
+'''

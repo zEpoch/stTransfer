@@ -98,7 +98,7 @@ class KDLoss(nn.Module):
             (target / self.T).softmax(1)
         ) * self.T * self.T
 
-
+'''
 class SpatialModel(nn.Module):
     def __init__(self, input_dim, num_classes, gae_dim, dae_dim, feat_dim):
         super(SpatialModel, self).__init__()
@@ -139,22 +139,66 @@ class SpatialModel(nn.Module):
         neg_loss = -F.logsigmoid(-neg_dec).mean()
         return pos_loss + neg_loss
 
+'''
+from torch_geometric.nn import GAE, GCNConv
+
+class SpatialModel(nn.Module):
+    def __init__(self, input_dim, num_classes, gae_dim, dae_dim, feat_dim):
+        super(SpatialModel, self).__init__()
+        self.input_dim = input_dim
+        self.num_classes = num_classes
+        self.gae_dim = gae_dim
+        self.dae_dim = dae_dim
+        self.feat_dim = feat_dim
+        self.fcat_dim = self.dae_dim[1] + self.gae_dim[1]
+        self.encoder = nn.Sequential(full_block(self.input_dim, self.dae_dim[0]),
+                                     full_block(self.dae_dim[0], self.dae_dim[1]))
+        self.decoder = nn.Linear(self.feat_dim, self.input_dim)
+        self.gae = GAE(GCNConv(self.dae_dim[1], self.gae_dim[1]))  # Replace VGAE with GAE
+        self.feat_fc_x = nn.Sequential(nn.Linear(self.fcat_dim, self.feat_dim), nn.ELU())
+        self.feat_fc_g = nn.Sequential(nn.Linear(self.fcat_dim, self.feat_dim), nn.ELU())
+        self.classifier = nn.Linear(self.fcat_dim, self.num_classes)
+
+    def forward(self, x, edge_index, edge_weight):
+        feat_x = self.encoder(x)
+        feat_g = self.gae.encode(feat_x, edge_index)  # Use GAE to encode graph features
+        feat = torch.cat([feat_x, feat_g], 1)
+        feat_x = self.feat_fc_x(feat)
+        feat_g = self.feat_fc_g(feat)
+        x_dec = self.decoder(feat_x)
+        dae_loss = F.mse_loss(x_dec, x)
+        gae_loss = self.recon_loss(feat_g, edge_weight, edge_index)  # No KL divergence loss
+        cls = self.classifier(feat)
+        return cls, dae_loss, gae_loss
+
+    def recon_loss(self, z, edge_weight, pos_edge_index, neg_edge_index=None):
+        pos_dec = self.gae.decoder(z, pos_edge_index, sigmoid=False)
+        pos_loss = F.binary_cross_entropy_with_logits(pos_dec, edge_weight)
+        pos_edge_index, _ = remove_self_loops(pos_edge_index)
+        pos_edge_index, _ = add_self_loops(pos_edge_index)
+        if neg_edge_index is None:
+            neg_edge_index = negative_sampling(pos_edge_index, z.size(0))
+        neg_dec = self.gae.decoder(z, neg_edge_index, sigmoid=False)
+        neg_loss = -F.logsigmoid(-neg_dec).mean()
+        return pos_loss + neg_loss
+
 
 class SpatialModelTrainer:
-    def __init__(self, input_dim, num_classes, device):
+    def __init__(self, input_dim, num_classes, device, KD_T):
         self.scaler = None
         self.scheduler = None
         self.optimizer = None
         self.criterion = None
         self.model = None
         self.device = device
-        self.set_model(input_dim, num_classes)
+        self.KD_T = KD_T
+        self.set_model(input_dim, num_classes, KD_T)
         self.set_optimizer()
 
-    def set_model(self, input_dim, num_classes):
+    def set_model(self, input_dim, num_classes, KD_T):
         gae_dim, dae_dim, feat_dim = [32, 8], [100, 20], 64
         self.model = SpatialModel(input_dim, num_classes, gae_dim, dae_dim, feat_dim).to(self.device)
-        self.criterion = KDLoss(1)
+        self.criterion = KDLoss(KD_T)
 
     def set_optimizer(self):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.01, weight_decay=0.0001) # type: ignore

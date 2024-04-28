@@ -39,12 +39,13 @@ install_requires = [
     "seaborn>=0.11.2",
     "torch>=1.11.0",
     "torch-geometric>=2.0.2",
-    "xgboost>=2.0.0"
+    "xgboost>=2.0.0",
+    "scvi-tools>=0.13.0",
     
 ]
 setuptools.setup(
     name = "stTransfer",
-    version = "1.0.17",
+    version = "1.0.23",
     description = "Transfer learning for spatial transcriptomics data and single-cell RNA-seq data.",
     author = "zhoutao",
     author_email = "zhotoa@foxmail.com",
