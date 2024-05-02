@@ -196,7 +196,7 @@ class SpatialModelTrainer:
         self.set_optimizer()
 
     def set_model(self, input_dim, num_classes, KD_T):
-        gae_dim, dae_dim, feat_dim = [32, 8], [100, 20], 64
+        gae_dim, dae_dim, feat_dim = [128, 8], [512, 20], 256
         self.model = SpatialModel(input_dim, num_classes, gae_dim, dae_dim, feat_dim).to(self.device)
         self.criterion = KDLoss(KD_T)
 
