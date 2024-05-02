@@ -78,7 +78,7 @@ class GraphEncoder(nn.Module):
         return mean, logstd
 '''
 
-def full_block(in_features, out_features, drop_rate=0.2):
+def full_block(in_features, out_features, drop_rate=0.4):
     return nn.Sequential(
         nn.Linear(in_features, out_features),
         nn.BatchNorm1d(out_features, momentum=0.01, eps=0.001),
