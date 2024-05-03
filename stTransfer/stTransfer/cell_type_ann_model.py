@@ -78,7 +78,7 @@ class GraphEncoder(nn.Module):
         return mean, logstd
 '''
 
-def full_block(in_features, out_features, drop_rate=0.4):
+def full_block(in_features, out_features, drop_rate=0.2):
     return nn.Sequential(
         nn.Linear(in_features, out_features),
         nn.BatchNorm1d(out_features, momentum=0.01, eps=0.001),
@@ -196,13 +196,13 @@ class SpatialModelTrainer:
         self.set_optimizer()
 
     def set_model(self, input_dim, num_classes, KD_T):
-        gae_dim, dae_dim, feat_dim = [128, 32], [512, 20], 256
+        gae_dim, dae_dim, feat_dim = [32, 8], [100, 20], 64
         self.model = SpatialModel(input_dim, num_classes, gae_dim, dae_dim, feat_dim).to(self.device)
         self.criterion = KDLoss(KD_T)
 
     def set_optimizer(self):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.01, weight_decay=0.0001) # type: ignore
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 1, gamma=1.0)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 1, gamma=.95)
         self.scaler = torch.cuda.amp.GradScaler()
 
     def load_checkpoint(self, path):
@@ -240,7 +240,8 @@ class SpatialModelTrainer:
             accuracy = correct / total * 100.0
             print('  [Epoch %3d] Loss: %.5f, Time: %.2f s, Psuedo-Acc: %.2f%%'
                   % (epoch, train_loss, process_time, accuracy))
-
+            
+    @torch.no_grad()
     def valid(self, data):
         self.model.eval() # type: ignore
         with torch.no_grad():
