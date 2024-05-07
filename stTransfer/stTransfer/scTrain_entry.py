@@ -61,7 +61,7 @@ def xgboost_train(X: np.ndarray,
     reverse_dic = {v:k for k,v in dic.items()}
     # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     print('########--- model init ---##########')
-    model = xgb.XGBClassifier(objective='multi: softmax', n_estimators=100, seed=42, device=device, rate_drop = 0.3, booster = 'gbtree', eval_metric = 'mlogloss')
+    model = xgb.XGBClassifier(objective='multi: softmax', n_estimators=100, seed=42, device=device, rate_drop = 0.5, booster = 'gbtree', eval_metric = 'mlogloss')
     kf = KFold(n_splits=n_fold, random_state=42, shuffle=True)
     # 用于存储每折的分数
     scores = []
