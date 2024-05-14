@@ -37,7 +37,7 @@ install_requires = [
     "scikit-learn>=1.0.2",
     "scipy>=1.8.0",
     "seaborn>=0.11.2",
-    "torch==1.13.1+cu117",
+    "torch>=1.11.0",
     "torch-geometric>=2.0.2",
     "xgboost>=2.0.0",
     "scvi-tools>=0.13.0",
