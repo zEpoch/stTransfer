@@ -28,7 +28,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 # requirements = open("requirements.txt").readline()
 install_requires = [
     "anndata>=0.8.0",
-    "scvi-tools==0.13.0",
+    "scvi-tools==0.14.0",
     "matplotlib>=3.5.1",
     "matplotlib-inline>=0.1.3",
     "networkx>=2.7.1",
