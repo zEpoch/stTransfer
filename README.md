@@ -7,7 +7,6 @@
 conda create -n zt_stTranfer_test python=3.8
 conda activate zt_stTranfer_test
 conda install anaconda::h5py
-pip install scvi-tools==0.13.0
 pip install git+https://github.com/zEpoch/stTransfer
 pip install pytorch_lightning==1.6.5
 ```
