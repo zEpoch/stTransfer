@@ -41,7 +41,6 @@ install_requires = [
     "torch>=1.11.0",
     "torch-geometric>=2.0.2",
     "xgboost>=2.0.0",
-    "pytorch_lightning==1.6.5",
 ]
 setuptools.setup(
     name = "stTransfer",
