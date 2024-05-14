@@ -3,11 +3,13 @@
 [![python >= 3.8](https://img.shields.io/badge/python-3.8-brightgreen)](https://www.python.org/) 
 
 ### Installation      
-```python
-pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
-pip install torch_geometric
-pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-1.13.1+cu117.html
-pip install stTransfer
+```bash
+conda create -n zt_stTranfer_test python=3.8
+conda activate zt_stTranfer_test
+conda install anaconda::h5py
+pip install scvi-tools==0.13.0
+pip install git+https://github.com/zEpoch/stTransfer
+pip install pytorch_lightning==1.6.5
 ```
 
 ```python

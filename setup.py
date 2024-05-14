@@ -28,6 +28,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 # requirements = open("requirements.txt").readline()
 install_requires = [
     "anndata>=0.8.0",
+    "scvi-tools==0.13.0",
     "matplotlib>=3.5.1",
     "matplotlib-inline>=0.1.3",
     "networkx>=2.7.1",
@@ -40,7 +41,6 @@ install_requires = [
     "torch>=1.11.0",
     "torch-geometric>=2.0.2",
     "xgboost>=2.0.0",
-    "scvi-tools>=0.13.0",
 ]
 setuptools.setup(
     name = "stTransfer",
