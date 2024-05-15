@@ -53,6 +53,9 @@ pip install pyro-ppl==1.8.6
 git config --global url."https://mirror.ghproxy.com/https://github.com".insteadOf "https://github.com" 
 pip install git+https://github.com/zEpoch/stTransfer
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
+pip install flax==0.7.2 
+pip install pyro-ppl==1.8.6
+pip install optax==0.1.7
 ```
 
 ```python
