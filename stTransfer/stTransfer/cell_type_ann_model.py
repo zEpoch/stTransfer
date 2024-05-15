@@ -17,66 +17,6 @@ import xgboost as xgb # type: ignore
 from xgboost import XGBClassifier # type: ignore
 warnings.filterwarnings("ignore")
 
-'''
-PyTorch Geometric (PyG) 提供了许多图神经网络层，其中一些可以直接替换 GCNConv 而不需要更改参数。以下是一些例子：
-
-ChebConv: ChebNet 卷积层，需要额外的参数 K，表示使用的切比雪夫多项式的阶数。
-
-SAGEConv: GraphSAGE 卷积层。
-
-GATConv: 图注意力网络 (GAT) 卷积层。发现很容易 聚合 临近节点的信息
-
-GINConv: 图同构网络 (GIN) 卷积层。无法正确调用
-
-GraphConv: 图卷积网络层，这是一个更一般的图卷积操作。发现 Psuedo-Acc 非常的低
-
-ARMAConv: 自回归移动平均 (ARMA) 卷积层。
-
-'''
-
-class GraphEncoder(nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels):
-        super(GraphEncoder, self).__init__()
-        # self.gc_feat = GCNConv(in_channels, hidden_channels)
-        # self.gc_mean = GCNConv(hidden_channels, out_channels)
-        # self.gc_logstd = GCNConv(hidden_channels, out_channels)
-        # self.gc_feat = GATConv(in_channels, hidden_channels)
-        # self.gc_mean = GATConv(hidden_channels, out_channels)
-        # self.gc_logstd = GATConv(hidden_channels, out_channels)
-        self.gc_feat = GCNConv(in_channels, hidden_channels,)
-        self.gc_mean = GATConv(hidden_channels, out_channels)
-        self.gc_logstd = GATConv(hidden_channels, out_channels)
-        
-    def forward(self, x, edge_index, edge_weight):
-        x = self.gc_feat(x, edge_index, edge_weight).relu()
-        mean = self.gc_mean(x, edge_index, edge_weight)
-        logstd = self.gc_logstd(x, edge_index, edge_weight)
-        return mean, logstd
-'''
-from torch.nn import Sequential, Linear, ReLU
-
-class GraphEncoder(nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels):
-        super(GraphEncoder, self).__init__()
-
-        nn1 = Sequential(Linear(in_channels, hidden_channels), ReLU(), Linear(hidden_channels, hidden_channels))
-        self.gc_feat = GINConv(nn1)
-        # x = self.gc_feat(x, edge_index)
-
-        nn2 = Sequential(Linear(hidden_channels, out_channels), ReLU(), Linear(out_channels, out_channels))
-        self.gc_mean = GINConv(nn2)
-        # mean = self.gc_mean(x, edge_index)
-
-        nn3 = Sequential(Linear(hidden_channels, out_channels), ReLU(), Linear(out_channels, out_channels))
-        self.gc_logstd = GINConv(nn3)
-        # logstd = self.gc_logstd(x, edge_index)
-
-    def forward(self, x, edge_index):
-        x = self.gc_feat(x, edge_index).relu()
-        mean = self.gc_mean(x, edge_index)
-        logstd = self.gc_logstd(x, edge_index)
-        return mean, logstd
-'''
 
 def full_block(in_features, out_features, drop_rate=0.2):
     return nn.Sequential(
@@ -97,49 +37,6 @@ class KDLoss(nn.Module):
             (input / self.T).log_softmax(1),
             (target / self.T).softmax(1)
         ) * self.T * self.T
-
-'''
-class SpatialModel(nn.Module):
-    def __init__(self, input_dim, num_classes, gae_dim, dae_dim, feat_dim):
-        super(SpatialModel, self).__init__()
-        self.input_dim = input_dim
-        self.num_classes = num_classes
-        self.gae_dim = gae_dim
-        self.dae_dim = dae_dim
-        self.feat_dim = feat_dim
-        self.fcat_dim = self.dae_dim[1] + self.gae_dim[1]
-        self.encoder = nn.Sequential(full_block(self.input_dim, self.dae_dim[0]),
-                                     full_block(self.dae_dim[0], self.dae_dim[1]))
-        self.decoder = nn.Linear(self.feat_dim, self.input_dim)
-        self.vgae = VGAE(GraphEncoder(self.dae_dim[1], self.gae_dim[0], self.gae_dim[1]))
-        self.feat_fc_x = nn.Sequential(nn.Linear(self.fcat_dim, self.feat_dim), nn.ELU())
-        self.feat_fc_g = nn.Sequential(nn.Linear(self.fcat_dim, self.feat_dim), nn.ELU())
-        self.classifier = nn.Linear(self.fcat_dim, self.num_classes)
-
-    def forward(self, x, edge_index, edge_weight):
-        feat_x = self.encoder(x)
-        feat_g = self.vgae.encode(feat_x, edge_index, edge_weight)
-        feat = torch.cat([feat_x, feat_g], 1)
-        feat_x = self.feat_fc_x(feat)
-        feat_g = self.feat_fc_g(feat)
-        x_dec = self.decoder(feat_x)
-        dae_loss = F.mse_loss(x_dec, x)
-        gae_loss = self.recon_loss(feat_g, edge_weight, edge_index) + 1 / len(x) * self.vgae.kl_loss()
-        cls = self.classifier(feat)
-        return cls, dae_loss, gae_loss
-
-    def recon_loss(self, z, edge_weight, pos_edge_index, neg_edge_index=None):
-        pos_dec = self.vgae.decoder(z, pos_edge_index, sigmoid=False)
-        pos_loss = F.binary_cross_entropy_with_logits(pos_dec, edge_weight)
-        pos_edge_index, _ = remove_self_loops(pos_edge_index)
-        pos_edge_index, _ = add_self_loops(pos_edge_index)
-        if neg_edge_index is None:
-            neg_edge_index = negative_sampling(pos_edge_index, z.size(0))
-        neg_dec = self.vgae.decoder(z, neg_edge_index, sigmoid=False)
-        neg_loss = -F.logsigmoid(-neg_dec).mean()
-        return pos_loss + neg_loss
-
-'''
 from torch_geometric.nn import GAE, GCNConv
 
 class SpatialModel(nn.Module):

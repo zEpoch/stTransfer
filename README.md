@@ -4,28 +4,55 @@
 
 ### Installation      
 ```bash
-conda create -n zt_stTranfer_test python=3.9
-conda activate zt_stTranfer_test
-conda install anaconda::h5py
-pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --index-url https://download.pytorch.org/whl/cpu
-pip install torch-cluster -f https://pytorch-geometric.com/whl/torch-2.1.1+cpu.html
-pip install torch-scatter -f https://pytorch-geometric.com/whl/torch-2.1.1+cpu.html
-pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-0.6.17+cpu.html
-pip install torch-geometric==2.3.1
-pip install torchmetrics==1.2.0
-pip install pytorch-lightning==1.6.5
+conda create -n stTranfer python=3.8
+conda activate stTranfer
+conda activate zt_stTransfer_2
+conda install anaconda::h5py # if h5py install error
+pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
 
+# install for cuda manylinux2014_aarch64
+pip install torch-cluster==1.6.1 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install torch-scatter==2.1.1 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install torch-sparse==0.6.17 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install torch-spline-conv==1.2.2 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install pyg-lib==0.2.0 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install torch-geometric
 
-    "pytorch-lightning==1.6.5",
-    "torch==1.13.1+cu117",
-    "torch-cluster==1.6.1+pt113cu117",
-    "torch-geometric==2.3.1",
-    "torch-scatter==2.1.1+pt113cu117",
-    "torch-sparse==0.6.17+pt113cu117",
-    "torch-spline-conv==1.2.2+pt113cu117",
-    "torchaudio==0.13.1+cu117",
-    "torchmetrics==1.2.0",
-    "torchvision==0.14.1+cu117",
+# install for cuda linux_x86_64
+pip install torch-cluster==1.6.1+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install torch-scatter==2.1.1+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install torch-sparse==0.6.17+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install torch-spline-conv==1.2.2+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install pyg-lib==0.2.0+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install torch-geometric
+
+# if jaxlib error if you need
+conda install jaxlib
+
+pip install git+https://github.com/zEpoch/stTransfer
+# need to install again
+pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
+
+# fix error you may need
+pip install flax==0.7.2 
+pip install pyro-ppl==1.8.6
+pip install optax==0.1.7
+```
+
+And for my mechine, I need to install the following packages:
+```bash
+pip install wheel
+git config --global url."https://mirror.ghproxy.com/https://github.com".insteadOf "https://github.com" 
+pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
+pip install torch-cluster==1.6.1+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install torch-scatter==2.1.1+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install torch-sparse==0.6.17+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install torch-spline-conv==1.2.2+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
+pip install wheel
+pip install pyro-ppl==1.8.6
+git config --global url."https://mirror.ghproxy.com/https://github.com".insteadOf "https://github.com" 
+pip install git+https://github.com/zEpoch/stTransfer
+pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
 ```
 
 ```python
