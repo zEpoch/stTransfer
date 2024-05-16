@@ -47,7 +47,8 @@ pip install torch-cluster==1.6.1+pt113cu117 -f https://pytorch-geometric.com/whl
 pip install torch-scatter==2.1.1+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
 pip install torch-sparse==0.6.17+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
 pip install torch-spline-conv==1.2.2+pt113cu117 -f https://pytorch-geometric.com/whl/torch-1.13.1%2Bcu117.html
-git config --global url."https://mirror.ghproxy.com/https://github.com".insteadOf "https://github.com" 
+pip install torch-geometric
+git config --global url."https://mirror.ghproxy.com/https://github.com".insteadOf "https://github.com"
 pip install git+https://github.com/zEpoch/stTransfer
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
 pip install flax==0.7.2 
