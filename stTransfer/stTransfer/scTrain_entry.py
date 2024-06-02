@@ -67,11 +67,11 @@ def xgboost_train(X: np.ndarray,
     scores = []
     print('########--- model train ---##########')
     count = 0
-    from sklearn.preprocessing import LabelEncoder
+    # from sklearn.preprocessing import LabelEncoder
     # Create a label encoder
-    le = LabelEncoder()
+    # le = LabelEncoder()
     # Fit the label encoder and transform y
-    y = le.fit_transform(y)
+    # y = le.fit_transform(y)
     # for train_index, test_index in kf.split(X):
     #     X_train, X_test = X[train_index], X[test_index]
     #     y_train, y_test = y[train_index], y[test_index]
