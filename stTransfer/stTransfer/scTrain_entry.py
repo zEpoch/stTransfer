@@ -67,33 +67,33 @@ def xgboost_train(X: np.ndarray,
     scores = []
     print('########--- model train ---##########')
     count = 0
-    # from sklearn.preprocessing import LabelEncoder
+    from sklearn.preprocessing import LabelEncoder
     
-    # for train_index, test_index in kf.split(X):
-    #     X_train, X_test = X[train_index], X[test_index]
-    #     y_train, y_test = y[train_index], y[test_index]
-    #     # Create a label encoder
-    #     le = LabelEncoder()
-    #     # Fit the label encoder and transform y
-    #     y_train = le.fit_transform(y_train)
-    #     # 在训练集上训练模型
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+        # Create a label encoder
+        le = LabelEncoder()
+        # Fit the label encoder and transform y
+        y_train = le.fit_transform(y_train)
+        # 在训练集上训练模型
         
-    #     model.fit(X_train, y_train, verbose=2)
+        model.fit(X_train, y_train, verbose=2)
 
-    #     # 在测试集上评估模型
-    #     score = model.score(X_test, y_test)
-    #     print(f"Fold {count+1}: {score}")
+        # 在测试集上评估模型
+        score = model.score(X_test, y_test)
+        print(f"Fold {count+1}: {score}")
         
-    #     scores.append(score)
-    #     count += 1
+        scores.append(score)
+        count += 1
 
-    # # 打印平均分数
-    # print(f"Average score: {np.mean(scores)}")
-
-    model.fit(X, y, verbose=2)
-    score = model.score(X, y)
     # 打印平均分数
-    print(f"Average score: {score}")
+    print(f"Average score: {np.mean(scores)}")
+
+    # model.fit(X, y, verbose=2)
+    # score = model.score(X, y)
+    # # 打印平均分数
+    # print(f"Average score: {score}")
     
     with open(osp.join(save_path,'xgboost_model.pkl'), 'wb') as f:
         pickle.dump((model, reverse_dic), f)
