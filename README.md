@@ -57,15 +57,33 @@ pip install optax==0.1.7
 ```
 
 ```python
-import stTransfer as st
+from stTransfer import transfer
+
+kwargs = {
+    'sc_adata_path': '/data/work/sttransfer/stereoseq/script/adata.scvi.leiden.anno.h5ad',
+    'sp_adata_path': '/data/work/sttransfer/cellbin_adatas/A01890F2_ot_left.h5ad',
+    'sc_anno': 'anno',
+    'sp_anno': 'annotation',
+    'name': 'A01890F2_ot_left',
+    'save_path': '/data/work/sttransfer/stereoseq/Result_3/',
+    'sp_filter': True,
+    'k_n_fold': 3, # for xgboost train
+    'st_spatial_anno': 'spatial', # in the obsm
+    'finetune_epochs': 50,
+    'finutune_pca_dim': 0,
+    'gpu': 0,
+    'finutune_w_cls': 10,
+    'finutune_w_gae': 1,
+    'finutune_w_dae': 1,
+'KD_T': 1,
+'marker_genes':None
+}
+transfer(**kwargs)
+
 import anndata as ad
-sc_adata = ad.read('/home/share/huadjyin/home/zhoutao3/zhoutao3/stTransfer_1/example/data/mouse_testis_sc/preprocess/preprocess.h5ad')
-st_adata = ad.read('/home/share/huadjyin/home/zhoutao3/zhoutao3/stTransfer_1/example/data/Mouse_spermatogenesis/processed/Diabetes_Slide-seq_data/Diabetes_1.h5ad')
-sc_ann_key = 'celltype'
-save_path = '/home/share/huadjyin/home/zhoutao3/zhoutao3/stTransfer_1/example/test/Mouse_spermatogenesis/Diabetes_1'
-
-marker_genes = None
-
-# st.sc_model_train_test(sc_adata, st_adata, sc_ann_key, save_path, marker_genes, finetune_epochs = 200,finutune_pca_dim = 0, gpu = 0) # if cuda
-st.sc_model_train_test(sc_adata, st_adata, sc_ann_key, save_path, marker_genes, finetune_epochs = 200,finutune_pca_dim = 0 )
+adata = ad.read('/data/work/sttransfer/stereoseq/Result_3/spd_filtered.h5ad')
+import pandas as pd
+csv = pd.read_csv('/data/work/sttransfer/stereoseq/Result_3/celltype_label.h5ad')
+csv.lolumns = ['0']
+adata.obs['celltype'] = csv['0']
 ```
