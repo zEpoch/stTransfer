@@ -82,6 +82,7 @@ transfer(**kwargs)
 
 import anndata as ad
 adata = ad.read('/data/work/sttransfer/stereoseq/Result_3/spd_filtered.h5ad')
+
 import pandas as pd
 csv = pd.read_csv('/data/work/sttransfer/stereoseq/Result_3/celltype_label.h5ad')
 csv.lolumns = ['0']
