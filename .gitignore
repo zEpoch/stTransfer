@@ -2,5 +2,6 @@
 /dist
 /stTransfer.egg-info
 /stTransfer/__pycache__
+/stTransfer/v1
 .pypirc
 setup.cfg
