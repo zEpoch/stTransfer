@@ -4,9 +4,8 @@
 
 ### Installation      
 ```bash
-conda create -n stTranfer python=3.8
+conda create -n stTranfer python=3.9
 conda activate stTranfer
-conda activate zt_stTransfer_2
 conda install anaconda::h5py # if h5py install error
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
 
@@ -78,7 +77,8 @@ kwargs = {
     'finutune_w_gae': 1,
     'finutune_w_dae': 1,
 'KD_T': 1,
-'marker_genes':None
+'marker_genes':None,
+    'with_spatial_info':True #sometimes with_spatial_info may not perform well
 }
 transfer(**kwargs)
 
