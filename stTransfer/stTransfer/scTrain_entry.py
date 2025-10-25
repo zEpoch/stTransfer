@@ -285,8 +285,8 @@ def transfer(
     if with_spatial_info:
         distribution_fine_tune(ST_X, 
                                 cell_coo = cell_coo, 
-                                psuedo_label = withoutSpatialInfo_label,  # Update to use withoutSpatialInfo_label
-                                psuedo_classes=reverse_dic,  # Add the missing argument "psuedo_classes"
+                                withoutSpatialInfo_label = withoutSpatialInfo_label,  # Update to use withoutSpatialInfo_label
+                                withoutSpatialInfo_class=reverse_dic,  # Add the missing argument "psuedo_classes"
                                 save_path=osp.join(save_path, name),
                                 epochs=finetune_epochs,
                                 pca_dim=finutune_pca_dim,
