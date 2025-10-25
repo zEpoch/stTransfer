@@ -87,6 +87,9 @@ adata = ad.read('/data/work/sttransfer/stereoseq/Result_3/spd_filtered.h5ad')
 
 import pandas as pd
 csv = pd.read_csv('/data/work/sttransfer/stereoseq/Result_3/celltype_label.h5ad')
-csv.lolumns = ['0']
-adata.obs['celltype'] = csv['0']
+csv.columns = ['0']  # Fix the typo from 'lolumns' to 'columns'
+adata.obs['celltype_withSpatialInformation'] = csv['0']
+csv = pd.read_csv('/data/work/sttransfer/stereoseq/Result_3/withoutSpatialInfo_class.csv')
+csv.columns = ['0']
+adata.obs['celltype_withoutSpatialInfo_class'] = csv['0']
 ```
